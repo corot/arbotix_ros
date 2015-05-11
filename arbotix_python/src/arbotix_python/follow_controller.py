@@ -101,7 +101,6 @@ class FollowController(Controller):
             self.server.set_aborted(text="Execution failed.")
             rospy.loginfo(self.name + ": Execution failed.")
  
-    
     def commandCb(self, msg):
         # don't execute if executing an action
         if self.server.is_active():
