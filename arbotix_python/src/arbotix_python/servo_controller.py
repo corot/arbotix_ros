@@ -395,8 +395,16 @@ class ServoController(Controller):
                                 continue 
             else:
                 # direct connection, or other hardware with no sync_read capability
-                for joint in self.dynamixels:
-                    joint.setCurrentFeedback(self.device.getPosition(joint.id))
+                pose = self.device.getPositions(len(self.dynamixels))
+                if pose and len(pose) == len(self.dynamixels):
+                    for joint in self.dynamixels:
+                        joint.setCurrentFeedback(pose[joint.id-1])
+                else:
+                    rospy.logerr("Wrong servo positions read: %s", pose)
+#    Using the new experimental command to read all servos at once
+#                 for joint in self.dynamixels:
+#                     joint.setCurrentFeedback(self.device.getPosition(joint.id))
+
             self.r_next = rospy.Time.now() + self.r_delta
 
         if rospy.Time.now() > self.w_next:

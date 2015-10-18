@@ -310,6 +310,21 @@ class ArbotiX:
         except:
             return -1
 
+    ## @brief Get the position of all servos from ID=1 to ID=servo_count.
+    ## We use an ArbotiX (id:253) instruction ARB_READ_POSE (6). It is
+    ## experimental, so please ensure that your firmware supports it.
+    ## TODO: would be nicer to provide a range or a list of servos to read
+    ##
+    ## @param servo_count The number of devices to read.
+    ##
+    ## @return The position of the requested servos.
+    def getPositions(self, servo_count):
+        values = self.execute(253, 6, [P_PRESENT_POSITION_L, servo_count])
+        try:
+            return [int(values[i]) + (int(values[i+1])<<8) for i in range(0, servo_count*2, 2)]
+        except:
+            return None
+
     ## @brief Get the speed of a servo.
     ##
     ## @param index The ID of the device to read.
