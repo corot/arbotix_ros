@@ -64,7 +64,7 @@ class ArbotiX:
     ## @return The error level returned by the device. 
     def getPacket(self, mode, id=-1, leng=-1, error=-1, params = None):
         try:
-            d = self._ser.read()     
+            d = self._ser.read(leng - 2 if mode == 5 else 1)     
         except Exception as e:
             print e
             return None
@@ -97,7 +97,7 @@ class ArbotiX:
             else:
                 return self.getPacket(5, id, leng, ord(d), list())
         elif mode == 5:         # read params
-            params.append(ord(d))
+            params += map(ord, d)
             if len(params) + 2 == leng:
                 return self.getPacket(6, id, leng, error, params)
             else:
