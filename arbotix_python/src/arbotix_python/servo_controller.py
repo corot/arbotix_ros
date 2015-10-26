@@ -404,6 +404,7 @@ class ServoController(Controller):
                         joint.setCurrentFeedback(pose[joint.id-1])
                 else:
                     rospy.logerr("Wrong servo positions read: %s", pose)
+
 #    Using the new experimental command to read all servos at once
 #                 for joint in self.dynamixels:
 #                     joint.setCurrentFeedback(self.device.getPosition(joint.id))
@@ -420,10 +421,20 @@ class ServoController(Controller):
                 if len(syncpkt) > 0:      
                     self.device.syncWrite(P_GOAL_POSITION_L,syncpkt)
             else:
+                values = [-255] * len(self.dynamixels)  # negative values are ignored
                 for joint in self.dynamixels:
                     v = joint.interpolate(1.0/self.w_delta.to_sec())
-                    if v != None:   # if was dirty      
-                        self.device.setPosition(joint.id, int(v))
+                    if v != None:   # if was dirty
+                        values[joint.id - 1] = int(v)
+                if self.device.setPositions(values) is None:
+                    rospy.logerr("Write servo positions failed: %s", values)
+
+#    Using the new experimental command to set all servos at once
+#                 for joint in self.dynamixels:
+#                     v = joint.interpolate(1.0/self.w_delta.to_sec())
+#                     if v != None:   # if was dirty      
+#                         self.device.setPosition(joint.id, int(v))
+
             for joint in self.hobbyservos: 
                 v = joint.interpolate(1.0/self.w_delta.to_sec())
                 if v != None:   # if it was dirty   
