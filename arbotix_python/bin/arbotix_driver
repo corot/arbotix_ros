@@ -72,7 +72,7 @@ class ArbotixROS(ArbotiX):
 
         # start an arbotix driver; differ port opening to properly handle connection failures
         if not self.fake:
-            ArbotiX.__init__(self, port, baud, timeout, open_port=True)
+            ArbotiX.__init__(self, port, baud, timeout, open_port=False)
             self.connectArbotiX()
         else:
             rospy.loginfo("ArbotiX being simulated.")
