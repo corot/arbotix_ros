@@ -165,7 +165,7 @@ class ArbotixROS(ArbotiX):
         
         # disconnect from the ArbotiX 
         if not self.fake:
-          self.closePort()
+            self.closePort()
 
     def analogInCb(self, req):
         # TODO: Add check, only 1 service per pin
