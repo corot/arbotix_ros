@@ -411,8 +411,8 @@ class ServoController(Controller):
 
             self.r_next = rospy.Time.now() + self.r_delta
 
-        if rospy.Time.now() > self.w_next:
-            if self.device.use_sync_write and not self.fake:
+        if rospy.Time.now() > self.w_next and not self.fake:
+            if self.device.use_sync_write:
                 syncpkt = list()
                 for joint in self.dynamixels:
                     v = joint.interpolate(1.0/self.w_delta.to_sec())
