@@ -423,7 +423,7 @@ class ServoController(Controller):
                     v = joint.interpolate(1.0/self.w_delta.to_sec())
                     if v != None:   # if was dirty
                         values[joint.id - 1] = int(v)
-                if self.device.setPositions(values) is None:
+                if any(v >= 0 for v in values) and self.device.setPositions(values) is None:
                     rospy.logerr("Write servo positions failed: %s", values)
 
 #    Using the new experimental command to set all servos at once
