@@ -134,11 +134,16 @@ class OneSideGripperModel:
 
     def setCommand(self, command):
         """ Take an input command of width to open gripper. """
-        # check limits
-        if command.position > self.max_opening or command.position < self.min_opening:
-            rospy.logerr("Command (%f) exceeds opening limits (%f, %f)",
-                          command.position, self.max_opening, self.min_opening)
-            return False
+        # check opening limits and bound if necessary
+        if command.position > self.max_opening:
+            rospy.logwarn("Command (%f) exceeds opening limits; we will use max opening instead (%f)",
+                           command.position, self.max_opening)
+            command.position = self.max_opening
+        elif command.position < self.min_opening:
+            rospy.logwarn("Command (%f) exceeds opening limits; we will use min opening instead (%f)",
+                           command.position, self.min_opening)
+            command.position = self.min_opening
+
         # compute angle
         angle = asin((command.position - self.pad_width)/(2*self.finger_length))
         # publish message
