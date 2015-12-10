@@ -174,14 +174,18 @@ class GripperActionController:
         rospy.init_node('gripper_controller')
 
         # auxiliary constants; make parameters if not generic enough
-        self._EPSILON_OPENING_DIFF_ = 0.001  # one millimeter
+        self._EPSILON_OPENING_DIFF_ = 0.001  # one millimeter; close enough to goal position
         
-        # This buffer size is correlated to gripper joint state topic frequency: if equal to that
-        # value, the controller will wait for a second before deciding that the gripper is stalled
-        # TODO: maybe we should read that value and add a "stalled_timeout" parameter instead! 
-        self._PROGRESS_BUFFER_SIZE_ = 10 
+        # buffer used to estimate gripper joint state topic frequency 
+        self._STATE_HZ_BUFFER_SIZE_ = 10 
         
         self.state_cb_event = threading.Event()
+        self.state_cb_times = collections.deque(maxlen=self._STATE_HZ_BUFFER_SIZE_)
+        
+        # time the controller will wait before deciding that the gripper is stalled
+        # WARN: if too long, and the commanded pose is smaller than the grasped object,
+        # the servo can get jammed (it will stop working ant its led will start blinking)
+        self.stalled_time = rospy.get_param('~stalled_time', 0.2)
 
         # setup model
         try:
@@ -196,7 +200,7 @@ class GripperActionController:
         elif model == 'singlesided':
             self.model = OneSideGripperModel()
         else:
-            rospy.logerr('unknown model specified, exiting')
+            rospy.logerr('Gripper Controller: unknown model specified, exiting')
             exit()
 
         # subscribe to joint_states
@@ -218,8 +222,18 @@ class GripperActionController:
             self.server.set_aborted()
             rospy.loginfo('Gripper Controller: Aborted.')
             return
-            
-        progress = collections.deque(maxlen=self._PROGRESS_BUFFER_SIZE_)
+        
+        # register progress so we can guess if the gripper is stalled; our buffer 
+        # must contain up to: stalled_time / joint_states period position values
+        if len(self.state_cb_times) == self.state_cb_times.maxlen:
+            T = sum(self.state_cb_times[i] - self.state_cb_times[i-1] \
+                    for i in xrange(1, len(self.state_cb_times) - 1)) \
+                 /(len(self.state_cb_times) - 1) 
+            progress = collections.deque(maxlen=round(self.stalled_time/T))
+        else:
+            self.server.set_aborted()
+            rospy.logerr('Gripper Controller: no messages from joint_states topic received')
+            return
 
         # keep watching for gripper position...
         while True:
@@ -239,7 +253,8 @@ class GripperActionController:
             
             # ...or when progress stagnates, probably signaling that the gripper is exerting max effort and not moving
             progress.append(round(diff, 3))  # round to millimeter to neglect tiny motions of the stalled gripper
-            if len(progress) == self._PROGRESS_BUFFER_SIZE_ and progress.count(progress[0]) == len(progress):
+            if len(progress) == progress.maxlen and progress.count(progress[0]) == len(progress):
+                # buffer full with all-equal positions -> gripper stalled
                 result.stalled = True
                 break
             
@@ -264,6 +279,8 @@ class GripperActionController:
         # notice the action server goal callback that new data is available
         self.state_cb_event.set()
         self.state_cb_event.clear()
+        
+        self.state_cb_times.append(rospy.get_rostime().to_sec())
 
 
 if __name__=='__main__':
