@@ -46,6 +46,7 @@ class Controller:
         self.joint_names = list()
         self.joint_positions = list()
         self.joint_velocities = list()
+        self.joint_efforts = list()
 
     ## @brief Start the controller, do any hardware setup needed.
     def startup(self):

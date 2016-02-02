@@ -70,6 +70,7 @@ class DynamixelServo(Joint):
         self.desired = 0.0                      # desired position (radians)
         self.last_cmd = 0.0                     # last position sent (radians)
         self.velocity = 0.0                     # moving speed
+        self.effort = 0.0                       # current effort
         self.enabled = True                     # can we take commands?
         self.active = False                     # are we under torque control?
         self.last = rospy.Time.now()
@@ -120,23 +121,27 @@ class DynamixelServo(Joint):
                 self.last = rospy.Time.now()
             return None
 
-    def setCurrentFeedback(self, reading):
+    def setCurrentFeedback(self, position, velocity=None, effort=None):
         """ Update angle in radians by reading from servo, or by 
             using position passed in from a sync read (in ticks). """
-        if reading > -1 and reading < self.ticks:     # check validity
+        if position > -1 and position < self.ticks:     # check validity
             self.reads += 1
             self.total_reads += 1
             last_angle = self.position
-            self.position = self.ticksToAngle(reading)
+            self.position = self.ticksToAngle(position)
             # update velocity estimate
             t = rospy.Time.now()
             self.velocity = (self.position - last_angle)/((t - self.last).to_nsec()/1000000000.0)
             self.last = t
         else:
-            rospy.logdebug("Invalid read of servo: id " + str(self.id) + ", value " + str(reading))
+            rospy.logdebug("Invalid read of servo: id " + str(self.id) + ", value " + str(position))
             self.errors += 1
             self.total_reads += 1
             return
+        if velocity:    # TODO: convert into physically meaningful values
+            self.velocity = velocity
+        if effort:      # TODO: convert into physically meaningful values
+            self.effort = effort
         if not self.active:
             self.last_cmd = self.position
 
@@ -395,12 +400,19 @@ class ServoController(Controller):
                                 continue 
             else:
                 # direct connection, or other hardware with no sync_read capability
-                pose = self.device.getPositions(len(self.dynamixels))
-                if pose and len(pose) == len(self.dynamixels):
+                #values = self.device.getPositions(len(self.dynamixels))
+                values = self.device.getPosAndEff(len(self.dynamixels))
+                if values and len(values) == len(self.dynamixels)*2:
                     for joint in self.dynamixels:
-                        joint.setCurrentFeedback(pose[joint.id-1])
+                        joint.setCurrentFeedback(position=values[(joint.id-1)*2],
+                                                 effort=values[(joint.id-1)*2 + 1])
+                    #print values[(5-1)*2 + 1], '\t\t'
+                    #print '\n'
+#                 if values and len(values) == len(self.dynamixels):
+#                     for joint in self.dynamixels:
+#                         joint.setCurrentFeedback(values[joint.id-1])
                 else:
-                    rospy.logerr("Wrong servo positions read: %s", pose)
+                    rospy.logerr("Wrong servo positions read: %s", pve)
 
 #    Using the new experimental command to read all servos at once
 #                 for joint in self.dynamixels:
