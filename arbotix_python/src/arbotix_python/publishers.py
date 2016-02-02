@@ -79,14 +79,17 @@ class JointStatePublisher:
             msg.name = list()
             msg.position = list()
             msg.velocity = list()
+            msg.effort = list()
             for joint in joints:
                 msg.name.append(joint.name)
                 msg.position.append(joint.position)
                 msg.velocity.append(joint.velocity)
+                msg.effort.append(joint.effort)
             for controller in controllers:
                 msg.name += controller.joint_names
                 msg.position += controller.joint_positions
                 msg.velocity += controller.joint_velocities
+                msg.effort += controller.joint_efforts
             self.pub.publish(msg)
             self.t_next = rospy.Time.now() + self.t_delta
 
