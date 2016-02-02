@@ -406,13 +406,13 @@ class ServoController(Controller):
                     for joint in self.dynamixels:
                         joint.setCurrentFeedback(position=values[(joint.id-1)*2],
                                                  effort=values[(joint.id-1)*2 + 1])
-                    #print values[(5-1)*2 + 1], '\t\t'
+                    print [values[i] for i in [1, 3, 5, 7, 9]]
                     #print '\n'
 #                 if values and len(values) == len(self.dynamixels):
 #                     for joint in self.dynamixels:
 #                         joint.setCurrentFeedback(values[joint.id-1])
                 else:
-                    rospy.logerr("Wrong servo positions read: %s", pve)
+                    rospy.logerr("Wrong servo values read: %s", values)
 
 #    Using the new experimental command to read all servos at once
 #                 for joint in self.dynamixels:

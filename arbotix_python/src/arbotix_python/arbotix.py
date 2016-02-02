@@ -299,7 +299,7 @@ class ArbotiX:
         return self.write(index, P_GOAL_POSITION_L, [value%256, value>>8])
 
     ## @brief Set the position of all servos from ID=1 to ID=len(values).
-    ## We use an ArbotiX (id:253) instruction ARB_WRITE_POSE (6). It is
+    ## We use an ArbotiX (id:253) instruction ARB_WRITE_POSE (50). It is
     ## experimental, so please ensure that your firmware supports it.
     ## TODO: would be nicer to provide a list of the servos to write.
     ##
@@ -310,7 +310,7 @@ class ArbotiX:
         params = [P_GOAL_POSITION_L, len(values)]
         for v in values:
             params += unpack('<BB', pack('<h', v))
-        return self.execute(253, 6, params)
+        return self.execute(253, 50, params)
 
     ## @brief Set the speed of a servo.
     ##
