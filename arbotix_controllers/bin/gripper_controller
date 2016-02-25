@@ -217,6 +217,7 @@ class GripperActionController:
         
         """ Take an input command of width to open gripper. """
         rospy.loginfo('Gripper Controller action goal received: %f' % goal.command.position)
+        
         # send command to gripper
         if not self.model.setCommand(goal.command):
             self.server.set_aborted()
@@ -234,6 +235,8 @@ class GripperActionController:
             self.server.set_aborted()
             rospy.logerr('Gripper Controller: no messages from joint_states topic received')
             return
+
+        diff_at_start = round(abs(goal.command.position - self.current_position), 3)
 
         # keep watching for gripper position...
         while True:
@@ -254,6 +257,12 @@ class GripperActionController:
             # ...or when progress stagnates, probably signaling that the gripper is exerting max effort and not moving
             progress.append(round(diff, 3))  # round to millimeter to neglect tiny motions of the stalled gripper
             if len(progress) == progress.maxlen and progress.count(progress[0]) == len(progress):
+                if progress[0] == diff_at_start:
+                    # we didn't move at all! is the gripper connected?
+                    self.server.set_aborted()
+                    rospy.logerr('Gripper Controller: gripper not moving; is the servo connected?')
+                    return
+
                 # buffer full with all-equal positions -> gripper stalled
                 result.stalled = True
                 break
@@ -265,6 +274,7 @@ class GripperActionController:
         result.position = self.current_position
         self.server.set_succeeded(result)
         rospy.loginfo('Gripper Controller: Succeeded.')
+
 
     def stateCb(self, joint_states):
         try:
