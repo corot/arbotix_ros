@@ -122,7 +122,8 @@ class ArbotixROS(ArbotiX):
         # initialize digital/analog IO streams
         self.io = dict()
         if not self.fake:
-            for v,t in {"digital_servos":DigitalServo,"digital_sensors":DigitalSensor,"analog_sensors":AnalogSensor}.items():
+            for v,t in {"digital_servos":DigitalServo,"digital_sensors":DigitalSensor, \
+                        "analog_servos":AnalogServo,"analog_sensors":AnalogSensor}.items():
                 temp = rospy.get_param("~"+v,dict())
                 for name in temp.keys():
                     pin = rospy.get_param('~'+v+'/'+name+'/pin',1)
@@ -181,7 +182,7 @@ class ArbotixROS(ArbotiX):
 
     def connectArbotiX(self):
         iter = 0
-        while True:
+        while not rospy.is_shutdown():
             try:
                 self.openPort()
                 rospy.loginfo("Started ArbotiX connection on port " + self._ser.port + ".")

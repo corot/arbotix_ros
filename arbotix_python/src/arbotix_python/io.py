@@ -32,7 +32,7 @@ from arbotix_msgs.msg import *
 
 class DigitalServo:
     """ Class for a digital output. """
-    def __init__(self, name, pin, value, rate, device):
+    def __init__(self, name, pin, value, rate, leng, device):
         self.device = device
         self.value = value
         self.direction = 0
@@ -41,9 +41,12 @@ class DigitalServo:
         rospy.Subscriber('~'+name, Digital, self.stateCb)
         self.t_delta = rospy.Duration(1.0/rate)
         self.t_next = rospy.Time.now() + self.t_delta
+
     def stateCb(self, msg):
         self.value = msg.value
         self.direction = msg.direction
+        self.device.setDigital(self.pin, self.value, self.direction)
+
     def update(self):
         if rospy.Time.now() > self.t_next:
             self.device.setDigital(self.pin, self.value, self.direction)
@@ -51,13 +54,14 @@ class DigitalServo:
 
 class DigitalSensor:
     """ Class for a digital input. """
-    def __init__(self, name, pin, value, rate, device):
+    def __init__(self, name, pin, value, rate, leng, device):
         self.device = device
         self.pin = pin
         self.device.setDigital(pin, value, 0)
         self.pub = rospy.Publisher('~'+name, Digital, queue_size=5)
         self.t_delta = rospy.Duration(1.0/rate)
         self.t_next = rospy.Time.now() + self.t_delta
+
     def update(self):
         if rospy.Time.now() > self.t_next:
             msg = Digital()
@@ -66,16 +70,38 @@ class DigitalSensor:
             self.pub.publish(msg)
             self.t_next = rospy.Time.now() + self.t_delta
 
+class AnalogServo:
+    """ Class for an analog output. """
+    def __init__(self, name, pin, value, rate, leng, device):
+        self.device = device
+        self.value = value
+        self.direction = 0
+        self.pin = pin
+        self.device.setServo(self.pin, self.value)
+        rospy.Subscriber('~'+name, Analog, self.stateCb)
+        self.t_delta = rospy.Duration(1.0/rate)
+        self.t_next = rospy.Time.now() + self.t_delta
+
+    def stateCb(self, msg):
+        self.value = msg.value
+        self.device.setServo(self.pin, self.value)
+
+    def update(self):
+        if rospy.Time.now() > self.t_next:
+            self.device.setServo(self.pin, self.value)
+            self.t_next = rospy.Time.now() + self.t_delta
+
 class AnalogSensor:
     """ Class for an analog input. """
     def __init__(self, name, pin, value, rate, leng, device):
         self.device = device
         self.pin = pin
-        self.device.setDigital(pin, value, 0)
+        self.device.setDigital(pin, value, 0) # LOW; I don't think this is necessary... mostly because it is not implemented by now. and it works!!!
         self.pub = rospy.Publisher('~'+name, Analog, queue_size=5)
         self.t_delta = rospy.Duration(1.0/rate)
         self.t_next = rospy.Time.now() + self.t_delta
         self.leng = leng
+
     def update(self):
         if rospy.Time.now() > self.t_next:
             msg = Analog()
@@ -84,4 +110,3 @@ class AnalogSensor:
             if msg.value >= 0:
                 self.pub.publish(msg)
             self.t_next = rospy.Time.now() + self.t_delta
-
