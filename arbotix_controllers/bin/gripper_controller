@@ -175,13 +175,13 @@ class GripperActionController:
 
         # auxiliary constants; make parameters if not generic enough
         self._EPSILON_OPENING_DIFF_ = 0.001  # one millimeter; close enough to goal position
-        
+
         # buffer used to estimate gripper joint state topic frequency 
         self._STATE_HZ_BUFFER_SIZE_ = 10 
-        
+
         self.state_cb_event = threading.Event()
         self.state_cb_times = collections.deque(maxlen=self._STATE_HZ_BUFFER_SIZE_)
-        
+
         # time the controller will wait before deciding that the gripper is stalled
         # WARN: if too long, and the commanded pose is smaller than the grasped object,
         # the servo can get jammed (it will stop working ant its led will start blinking)
@@ -203,27 +203,29 @@ class GripperActionController:
             rospy.logerr('Gripper Controller: unknown model specified, exiting')
             exit()
 
-        # subscribe to joint_states
+        # subscribe to joint_states topic
         rospy.Subscriber('joint_states', JointState, self.stateCb)
 
         # subscribe to command and then spin
-        self.server = actionlib.SimpleActionServer('~gripper_action', GripperCommandAction, execute_cb=self.actionCb, auto_start=False)
+        self.server = actionlib.SimpleActionServer('~gripper_action', GripperCommandAction,
+                                                   execute_cb=self.actionCb, auto_start=False)
         self.server.start()
         rospy.spin()
 
     def actionCb(self, goal):
         result = GripperCommandResult()
         feedback = GripperCommandFeedback()
-        
+
         """ Take an input command of width to open gripper. """
-        rospy.loginfo('Gripper Controller action goal received: %f' % goal.command.position)
-        
+        rospy.loginfo('Gripper Controller action goal received: position %f, max_effort %f',
+                      goal.command.position, goal.command.max_effort)
+
         # send command to gripper
         if not self.model.setCommand(goal.command):
             self.server.set_aborted()
             rospy.loginfo('Gripper Controller: Aborted.')
             return
-        
+
         # register progress so we can guess if the gripper is stalled; our buffer 
         # must contain up to: stalled_time / joint_states period position values
         if len(self.state_cb_times) == self.state_cb_times.maxlen:
@@ -247,13 +249,24 @@ class GripperActionController:
 
             # synchronize with the joints state callbacks;
             self.state_cb_event.wait()
+            self.state_cb_event.clear()
 
             # break when we have reached the goal position...
             diff = abs(goal.command.position - self.current_position)
             if diff < self._EPSILON_OPENING_DIFF_:
                 result.reached_goal = True
                 break
-            
+
+            # ...or when the gripper is exerting beyond max effort
+            if goal.command.max_effort and self.current_effort >= goal.command.max_effort:
+                # stop moving to prevent damaging the gripper
+                goal.command.position = self.current_position
+                self.model.setCommand(goal.command)
+                rospy.logerr('Gripper Controller: max effort reached at position %f (%f >= %f)',
+                             self.current_position, self.current_effort, goal.command.max_effort)
+                result.stalled = True
+                break
+
             # ...or when progress stagnates, probably signaling that the gripper is exerting max effort and not moving
             progress.append(round(diff, 3))  # round to millimeter to neglect tiny motions of the stalled gripper
             if len(progress) == progress.maxlen and progress.count(progress[0]) == len(progress):
@@ -264,32 +277,48 @@ class GripperActionController:
                     return
 
                 # buffer full with all-equal positions -> gripper stalled
+                goal.command.position = self.current_position
+                self.model.setCommand(goal.command)
+                rospy.logerr('Gripper Controller: gripper stalled at position %f', self.current_position)
                 result.stalled = True
                 break
-            
+
             # publish feedback
             feedback.position = self.current_position
+            feedback.effort = self.current_effort
+
             self.server.publish_feedback(feedback)
 
+        # publish one last feedback and the result (identical)
+        feedback.position = self.current_position
+        feedback.effort = self.current_effort
+        feedback.reached_goal = result.reached_goal
+        feedback.stalled = result.stalled
+
+        self.server.publish_feedback(feedback)
+
         result.position = self.current_position
+        result.effort = self.current_effort
+
         self.server.set_succeeded(result)
-        rospy.loginfo('Gripper Controller: Succeeded.')
+        rospy.loginfo('Gripper Controller: Succeeded (%s)', 'goal reached' if result.reached_goal else 'stalled')
 
 
     def stateCb(self, joint_states):
         try:
             index = joint_states.name.index(self.model.joint)
             angle = joint_states.position[index]
+            effort = joint_states.effort[index]
         except ValueError:
             # no problem; probably a joint states message unrelated to the gripper
             return
-        
+
         self.current_position = self.model.getPosition(angle)
-        
+        self.current_effort = abs(effort)
+
         # notice the action server goal callback that new data is available
         self.state_cb_event.set()
-        self.state_cb_event.clear()
-        
+
         self.state_cb_times.append(rospy.get_rostime().to_sec())
 
 
