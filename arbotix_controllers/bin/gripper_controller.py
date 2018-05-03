@@ -324,7 +324,6 @@ class GripperActionController:
 
 if __name__=='__main__':
     try:
-        rospy.logwarn("Please use gripper_controller (no .py)")
         GripperActionController()
     except rospy.ROSInterruptException:
         rospy.loginfo('Hasta la Vista...')
