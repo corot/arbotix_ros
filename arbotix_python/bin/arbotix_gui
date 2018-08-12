@@ -69,10 +69,10 @@ class controllerGUI(wx.Frame):
         driveBox = wx.StaticBoxSizer(drive,orient=wx.VERTICAL) 
         self.movebase = wx.Panel(self,size=(width,width-20))
         self.movebase.SetBackgroundColour('WHITE')
-        self.movebase.Bind(wx.EVT_MOTION, self.onMove)  
+        self.movebase.Bind(wx.EVT_MOTION, self.onMove)
         wx.StaticLine(self.movebase, -1, (width/2, 0), (1,width), style=wx.LI_VERTICAL)
         wx.StaticLine(self.movebase, -1, (0, width/2), (width,1))
-        driveBox.Add(self.movebase)        
+        driveBox.Add(self.movebase)
         sizer.Add(driveBox,(0,0),wx.GBSpan(1,1),wx.EXPAND|wx.TOP|wx.BOTTOM|wx.LEFT,5)
         self.forward = 0
         self.turn = 0
@@ -83,11 +83,11 @@ class controllerGUI(wx.Frame):
         # Move Servos
         servo = wx.StaticBox(self, -1, 'Move Servos')
         servo.SetFont(wx.Font(10, wx.DEFAULT, wx.NORMAL, wx.BOLD))
-        servoBox = wx.StaticBoxSizer(servo,orient=wx.VERTICAL) 
+        servoBox = wx.StaticBoxSizer(servo,orient=wx.VERTICAL)
         servoSizer = wx.GridBagSizer(5,5)
 
         joint_defaults = getJointsFromURDF()
-        
+
         i = 0
         dynamixels = rospy.get_param('/arbotix/dynamixels', dict())
         self.servos = list()
@@ -107,13 +107,13 @@ class controllerGUI(wx.Frame):
                 self.relaxers.append(None)
             # create slider
             s = servoSlider(self, min_angle, max_angle, name, i)
-            servoSizer.Add(s.enabled,(i,0), wx.GBSpan(1,1),wx.ALIGN_CENTER_VERTICAL)   
+            servoSizer.Add(s.enabled,(i,0), wx.GBSpan(1,1),wx.ALIGN_CENTER_VERTICAL)
             servoSizer.Add(s.position,(i,1), wx.GBSpan(1,1),wx.ALIGN_CENTER_VERTICAL)
             self.servos.append(s)
             i += 1
 
         # add everything
-        servoBox.Add(servoSizer) 
+        servoBox.Add(servoSizer)
         sizer.Add(servoBox, (0,1), wx.GBSpan(1,1), wx.EXPAND|wx.TOP|wx.BOTTOM|wx.RIGHT,5)
         self.Bind(wx.EVT_CHECKBOX, self.enableSliders)
         # now we can subscribe
@@ -126,9 +126,10 @@ class controllerGUI(wx.Frame):
         wx.EVT_TIMER(self, self.TIMER_ID, self.onTimer)
 
         # bind the panel to the paint event
-        wx.EVT_PAINT(self, self.onPaint)
+        # wx.EVT_PAINT(self, self.onPaint)
+        self.movebase.Bind(wx.EVT_PAINT, self.onPaint)
         self.dirty = 1
-        self.onPaint()
+        #self.onPaint()
 
         self.SetSizerAndFit(sizer)
         self.Show(True)
@@ -179,7 +180,7 @@ class controllerGUI(wx.Frame):
         else:
             self.forward = 0; self.Y = 0
             self.turn = 0; self.X = 0
-        self.onPaint()          
+        #self.onPaint()
         
     def onTimer(self, event=None):
         # send joint updates
@@ -200,7 +201,7 @@ class controllerGUI(wx.Frame):
 if __name__ == '__main__':
     # initialize GUI
     rospy.init_node('controllerGUI')
-    app = wx.PySimpleApp()
+    app = wx.App(False)
     frame = controllerGUI(None, True)
     app.MainLoop()
 
