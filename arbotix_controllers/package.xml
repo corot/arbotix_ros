@@ -8,10 +8,11 @@
   <maintainer email="mike@vanadiumlabs.com">Michael Ferguson</maintainer>
   <license>BSD</license>
   <url>http://ros.org/wiki/arbotix_controllers</url>
-  
+
   <buildtool_depend>catkin</buildtool_depend>
 
   <run_depend>arbotix_python</run_depend>
   <run_depend>trajectory_msgs</run_depend>
+  <run_depend>actionlib</run_depend>
   <run_depend>tf</run_depend>
 </package>
