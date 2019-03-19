@@ -578,9 +578,10 @@ class ArbotiX:
     ## @return -1 if error.
     def setServo(self, index, value):
         if index > 7: return -1
-        if value != 0 and (value < 500 or value > 2500):
-            print "ArbotiX Error: Servo value out of range:", value
+        if 0 <= value <= 2500:
+            self.write(253, self.SERVO_BASE + 2*index, [value%256, value>>8])
         else:
-            self.write(253, self._SERVO_BASE + 2*index, [value%256, value>>8])
+            print "ArbotiX Error: Servo value out of range:", value
+
         return 0
 
