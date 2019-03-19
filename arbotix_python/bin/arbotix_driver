@@ -93,7 +93,7 @@ class ArbotixROS(ArbotiX):
                 self.joints[name] = DynamixelServo(self, name)
 
         # setup controller
-        self.controllers = [ServoController(self, "servos"), ]
+        self.controllers = []
         controllers = rospy.get_param("~controllers", dict())
         for name, params in controllers.items():
             try:
