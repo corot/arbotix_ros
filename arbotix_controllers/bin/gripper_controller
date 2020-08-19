@@ -206,9 +206,16 @@ class GripperActionController:
         # subscribe to joint_states topic
         rospy.Subscriber('joint_states', JointState, self.stateCb)
 
-        # subscribe to command and then spin
+        # create gripper command action server
         self.server = actionlib.SimpleActionServer('~gripper_action', GripperCommandAction,
                                                    execute_cb=self.actionCb, auto_start=False)
+
+        # wait until state_cb_times is full with joints state msgs before starting the action server
+        if not self.state_cb_event.wait(60.0):
+            rospy.logerr('Gripper Controller: no joints state after 60 seconds')
+            exit()
+        self.state_cb_event.clear()
+
         self.server.start()
         rospy.spin()
 
@@ -316,10 +323,12 @@ class GripperActionController:
         self.current_position = self.model.getPosition(angle)
         self.current_effort = abs(effort)
 
-        # notice the action server goal callback that new data is available
-        self.state_cb_event.set()
-
         self.state_cb_times.append(rospy.get_rostime().to_sec())
+
+        # notice the action server goal callback that new data is available
+        # block start server until state_cb_times is full, as this is required for acting
+        if len(self.state_cb_times) == self.state_cb_times.maxlen:
+            self.state_cb_event.set()
 
 
 if __name__=='__main__':
